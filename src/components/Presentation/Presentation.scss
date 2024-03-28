@@ -1,0 +1,9 @@
+.Presentation {
+  &-Container {
+    display: flex;
+    flex-direction: column;
+  }
+  &-IFrame {
+    margin: 0 auto;
+  }
+}

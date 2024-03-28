@@ -1,0 +1,19 @@
+.Dictaphone {
+  &-Page {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &-Controllers {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &-Button {
+    flex: auto;
+    height: 50px;
+    font-size: medium;
+  }
+}

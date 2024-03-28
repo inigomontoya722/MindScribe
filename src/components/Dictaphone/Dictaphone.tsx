@@ -1,33 +1,23 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import "regenerator-runtime/runtime";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
-import {
-  MainContainer,
-  ChatContainer,
-  MessageList,
-  Message,
-  MessageInput,
-  TypingIndicator,
-} from "@chatscope/chat-ui-kit-react";
+import { template } from "./Dictaphone.constants";
+import Presentation from "../Presentation";
+import { cn } from "@bem-react/classname";
 
-const API_KEY = "";
+import "./Dictaphone.scss";
 
-const template = (
-  text: string,
-  speech: string
-) => `Мне нужно, чтобы ты выступил в роли докладчика на конференции перед большой аудиторией. Представь, что у тебя есть подготовленный текст:
-${text}
-Ты уже успел сказать вот это: 
-${speech}
-Предложи три мысли, которые можно сказать дальше, так, чтобы текст был логически связан, а также мы бы не упустили ничего важного. Обязательно опирайся на подготовленный текст! Также каждое предложение по длине должно быть не больше, чем 20 слов! Используй более фольмальный стиль!`;
+const cnDictaphone = cn("Dictaphone");
 
 const Dictaphone = () => {
+  const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+
   const [messages, setMessages] = useState([
     {
       message: "Hello, I'm ChatGPT! Ask me anything!",
@@ -36,7 +26,24 @@ const Dictaphone = () => {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [visibleText, setVisibleText] = useState(true);
   const [text, setText] = useState<string>("");
+  const [timer, setTimer] = useState();
+
+  const timeoutCallback = () => {
+    handleSendRequest(transcript);
+    setTimer(setTimeout(timeoutCallback, 6000));
+  };
+
+  const hints = useMemo(() => {
+    const responses = messages
+      .slice(1)
+      .reduce((acc, { message, sender }, index) => {
+        if (sender !== "user") acc.push(<p key={index}>{message}</p>);
+        return acc;
+      }, []);
+    return responses[responses.length - 1];
+  }, [messages]);
 
   const handleSendRequest = async (message: string) => {
     const newMessage = {
@@ -107,7 +114,8 @@ const Dictaphone = () => {
   }
 
   return (
-    <div>
+    <div className={cnDictaphone("Page")}>
+      <Presentation />
       <textarea
         value={text}
         onInput={(t) => {
@@ -115,26 +123,55 @@ const Dictaphone = () => {
         }}
         rows={20}
         cols={100}
+        style={{
+          resize: "none",
+          display: visibleText ? "block" : "none",
+        }}
       />
       <p>Microphone: {listening ? "on" : "off"}</p>
-      <button
-        onClick={() => SpeechRecognition.startListening({ continuous: true })}
-      >
-        Start
-      </button>
-      <button onClick={SpeechRecognition.stopListening}>Stop</button>
-      <button onClick={resetTranscript}>Reset</button>
-      <button onClick={() => handleSendRequest(transcript)}>ChatGPT</button>
-      <p>{transcript}</p>
-      {isTyping ? (
-        <p>...</p>
-      ) : (
-        messages
-          .slice(1)
-          .map(({ message, sender }, index) =>
-            sender === "user" ? null : <p key={index}>{message}</p>
-          )
-      )}
+      <div className={cnDictaphone("Controllers")}>
+        <button
+          className={cnDictaphone("Button")}
+          onClick={() => {
+            SpeechRecognition.startListening({ continuous: true });
+            setTimer(setTimeout(timeoutCallback, 1000));
+          }}
+        >
+          Start
+        </button>
+        <button
+          className={cnDictaphone("Button")}
+          onClick={() => {
+            SpeechRecognition.stopListening();
+            clearTimeout(timer);
+          }}
+        >
+          Stop
+        </button>
+        <button
+          className={cnDictaphone("Button")}
+          onClick={() => {
+            resetTranscript();
+            setMessages([
+              {
+                message: "Hello, I'm ChatGPT! Ask me anything!",
+                sentTime: "just now",
+                sender: "ChatGPT",
+              },
+            ]);
+          }}
+        >
+          Reset
+        </button>
+        <button
+          className={cnDictaphone("Button")}
+          onClick={() => setVisibleText(!visibleText)}
+        >
+          {visibleText ? "Hide text" : "Show text"}
+        </button>
+      </div>
+      {/* <p>{transcript}</p> */}
+      {hints}
     </div>
   );
 };
